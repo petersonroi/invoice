@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Smart Invoice Generator | Auto Calc Tax & Line Items | PDF & Print</title>
+    <!-- html2pdf.js library for high-quality PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Font Awesome 6 (free icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #e9f0f5 0%, #d9e2ec 100%);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 2rem 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* main invoice card */
+        .invoice-container {
+            max-width: 1100px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        /* header area */
+        .invoice-header {
+            background: #1f2b3c;
+            padding: 1.8rem 2.2rem;
+            color: white;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand h1 {
+            font-weight: 700;
+            font-size: 1.9rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand h1 i {
+            font-size: 2rem;
+            color: #ffb347;
+        }
+
+        .brand p {
+            font-size: 0.85rem;
+            opacity: 0.75;
+            margin-top: 6px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+        }
+
+        .btn {
+            border: none;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(2px);
+            padding: 10px 22px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: #ffb347;
+            color: #1f2b3c;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary:hover {
+            background: #ffa01e;
+            transform: scale(0.97);
+        }
+
+        .btn-outline-light {
+            border: 1px solid rgba(255,255,255,0.5);
+            background: transparent;
+        }
+
+        .btn-outline-light:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* invoice body */
+        .invoice-body {
+            padding: 2rem 2.2rem;
+        }
+
+        /* company and client info */
+        .info-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 28px;
+            margin-bottom: 32px;
+            background: #f8fafd;
+            padding: 1.2rem 1.5rem;
+            border-radius: 24px;
+        }
+
+        .info-box {
+            flex: 1;
+        }
+
+        .info-box h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4a627a;
+            margin-bottom: 12px;
+        }
+
+        .info-box input, .info-box textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cddfe7;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            background: white;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+
+        .info-box input:focus, .info-box textarea:focus {
+            outline: none;
+            border-color: #ffb347;
+            box-shadow: 0 0 0 3px rgba(255,180,71,0.2);
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        /* line items table */
+        .items-section {
+            margin: 28px 0 20px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #1f2b3c;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 5px solid #ffb347;
+            padding-left: 15px;
+        }
+
+        .items-table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #e2edf2;
+            background: white;
+        }
+
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .invoice-table th {
+            background: #f1f6f9;
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e4e;
+            border-bottom: 1px solid #dce7ef;
+        }
+
+        .invoice-table td {
+            padding: 12px 12px;
+            border-bottom: 1px solid #e9f0f4;
+            vertical-align: middle;
+        }
+
+        .invoice-table input {
+            width: 100%;
+            min-width: 80px;
+            padding: 8px 8px;
+            border: 1px solid #cbdde6;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            text-align: right;
+        }
+
+        .invoice-table input.item-name {
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .qty-input, .price-input {
+            text-align: center;
+        }
+
+        .remove-row {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #b91c1c;
+            cursor: pointer;
+            transition: 0.1s;
+            width: 32px;
+            border-radius: 40px;
+        }
+
+        .remove-row:hover {
+            background: #ffe6e6;
+            transform: scale(1.05);
+        }
+
+        .add-item-btn {
+            margin-top: 16px;
+            background: #eef3f7;
+            border: 1px dashed #95b3c4;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #2c5a7a;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.2s;
+        }
+
+        .add-item-btn:hover {
+            background: #e2ecf3;
+            border-color: #ffb347;
+            color: #1f2b3c;
+        }
+
+        /* summary panel */
+        .summary-panel {
+            background: #fefaf5;
+            border-radius: 28px;
+            padding: 1.4rem 1.8rem;
+            margin-top: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            border: 1px solid #ffe2bf;
+        }
+
+        .summary-details {
+            width: 320px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 1rem;
+            border-bottom: 1px solid #f0e1cf;
+        }
+
+        .summary-row.total-row {
+            font-weight: 800;
+            font-size: 1.4rem;
+            border-bottom: none;
+            margin-top: 10px;
+            padding-top: 12px;
+            border-top: 2px solid #ffcf9a;
+            color: #b45116;
+        }
+
+        .tax-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .tax-group label {
+            font-weight: 500;
+        }
+
+        .tax-rate-input {
+            width: 85px;
+            padding: 6px 10px;
+            border-radius: 28px;
+            border: 1px solid #ffcd94;
+            background: white;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        /* footer */
+        .invoice-footer {
+            background: #f9fcfd;
+            padding: 1rem 2.2rem 1.5rem;
+            font-size: 0.75rem;
+            color: #6c8ba0;
+            text-align: center;
+            border-top: 1px solid #e2edf2;
+        }
+
+        @media (max-width: 700px) {
+            .invoice-body {
+                padding: 1.5rem;
+            }
+            .summary-panel {
+                justify-content: center;
+            }
+            .btn {
+                padding: 6px 14px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="invoice-container" id="invoiceContainer">
+    <div class="invoice-header">
+        <div class="brand">
+            <h1><i class="fas fa-file-invoice-dollar"></i> SmartInvoice</h1>
+            <p>Automated calculations • Tax ready • Professional PDF</p>
+        </div>
+        <div class="action-buttons">
+            <button class="btn btn-outline-light" id="printBtn"><i class="fas fa-print"></i> Print</button>
+            <button class="btn btn-primary" id="savePdfBtn"><i class="fas fa-file-pdf"></i> Save as PDF</button>
+        </div>
+    </div>
+
+    <div class="invoice-body" id="invoiceContent">
+        <!-- Business & Client info -->
+        <div class="info-grid">
+            <div class="info-box">
+                <h3><i class="fas fa-store"></i> FROM (Your Company)</h3>
+                <input type="text" id="companyName" placeholder="Company name" value="InnoSoft Solutions">
+                <textarea id="companyAddress" rows="2" placeholder="Street, City, ZIP, Country">123 Business Ave, Suite 400, New York, NY 10001</textarea>
+                <input type="text" id="companyEmail" placeholder="Email" value="contact@innosoft.com">
+            </div>
+            <div class="info-box">
+                <h3><i class="fas fa-user-check"></i> BILL TO (Client)</h3>
+                <input type="text" id="clientName" placeholder="Client name" value="Bright Future Ltd">
+                <textarea id="clientAddress" rows="2" placeholder="Client address">456 Client Street, London, UK</textarea>
+                <input type="text" id="clientEmail" placeholder="Client Email" value="billing@brightfuture.com">
+            </div>
+            <div class="info-box">
+                <h3><i class="fas fa-receipt"></i> INVOICE DETAILS</h3>
+                <input type="text" id="invoiceNumber" placeholder="Invoice #" value="INV-2409-01">
+                <input type="date" id="invoiceDate" value="2026-04-30">
+                <input type="text" id="dueDate" placeholder="Due date" value="2026-05-15">
+            </div>
+        </div>
+
+        <!-- Line items section -->
+        <div class="items-section">
+            <div class="section-title">
+                <i class="fas fa-list-ul"></i> Line Items
+            </div>
+            <div class="items-table-wrapper">
+                <table class="invoice-table" id="itemsTable">
+                    <thead>
+                        <tr><th>Item / Description</th><th>Quantity</th><th>Unit Price ($)</th><th>Amount ($)</th><th style="width: 45px;"></th></tr>
+                    </thead>
+                    <tbody id="itemsBody">
+                        <!-- dynamic rows will be injected via JS, but we populate with default row -->
+                    </tbody>
+                </table>
+            </div>
+            <button class="add-item-btn" id="addItemBtn"><i class="fas fa-plus-circle"></i> Add new line item</button>
+        </div>
+
+        <!-- Summary & Tax calculations -->
+        <div class="summary-panel">
+            <div class="summary-details">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span id="subtotalAmount">$0.00</span>
+                </div>
+                <div class="summary-row">
+                    <div class="tax-group">
+                        <label>Tax Rate (%):</label>
+                        <input type="number" id="taxRate" class="tax-rate-input" value="10" step="0.5" min="0">
+                        <span>%</span>
+                    </div>
+                    <span id="taxAmount">$0.00</span>
+                </div>
+                <div class="summary-row total-row">
+                    <span><strong>Total Amount:</strong></span>
+                    <span id="totalAmount">$0.00</span>
+                </div>
+            </div>
+        </div>
+        <div style="font-size: 0.8rem; margin-top: 12px; text-align: right; color:#5c7f9c;">
+            <i class="fas fa-calculator"></i> Auto-updates: quantity, price, tax
+        </div>
+    </div>
+
+    <div class="invoice-footer">
+        <i class="fas fa-lock"></i> Thank you for your business — Payment due within terms. Auto-generated invoice.
+    </div>
+</div>
+
+<script>
+    // ---------- DOM Elements ----------
+    const itemsBody = document.getElementById('itemsBody');
+    const addItemBtn = document.getElementById('addItemBtn');
+    const subtotalSpan = document.getElementById('subtotalAmount');
+    const taxAmountSpan = document.getElementById('taxAmount');
+    const totalAmountSpan = document.getElementById('totalAmount');
+    const taxRateInput = document.getElementById('taxRate');
+    
+    // Store all dynamic rows to manage events (delegation works anyway)
+    let rowCounter = 0;
+    
+    // Helper: format currency USD
+    function formatMoney(amount) {
+        return '$' + amount.toFixed(2);
+    }
+    
+    // Function to update amount for a specific row based on qty & price
+    function updateRowAmount(rowElement) {
+        const qtyInput = rowElement.querySelector('.qty-input');
+        const priceInput = rowElement.querySelector('.price-input');
+        const amountSpan = rowElement.querySelector('.item-amount');
+        
+        let qty = parseFloat(qtyInput.value);
+        let price = parseFloat(priceInput.value);
+        if (isNaN(qty)) qty = 0;
+        if (isNaN(price)) price = 0;
+        const amount = qty * price;
+        amountSpan.innerText = formatMoney(amount);
+        return amount;
+    }
+    
+    // Global recalc: iterate all rows -> compute subtotal, tax, total
+    function recalcTotals() {
+        let subtotal = 0;
+        const rows = document.querySelectorAll('#itemsBody tr');
+        for (let row of rows) {
+            const qtyInput = row.querySelector('.qty-input');
+            const priceInput = row.querySelector('.price-input');
+            let qty = parseFloat(qtyInput?.value) || 0;
+            let price = parseFloat(priceInput?.value) || 0;
+            const amount = qty * price;
+            subtotal += amount;
+            // Also ensure displayed amount is in sync
+            const amountSpan = row.querySelector('.item-amount');
+            if (amountSpan) amountSpan.innerText = formatMoney(amount);
+        }
+        
+        let taxRate = parseFloat(taxRateInput.value);
+        if (isNaN(taxRate)) taxRate = 0;
+        const taxAmount = subtotal * (taxRate / 100);
+        const total = subtotal + taxAmount;
+        
+        subtotalSpan.innerText = formatMoney(subtotal);
+        taxAmountSpan.innerText = formatMoney(taxAmount);
+        totalAmountSpan.innerText = formatMoney(total);
+    }
+    
+    // Create a new row with default empty/example values
+    function createNewRow(itemName = '', quantity = 1, unitPrice = 0.00) {
+        const tr = document.createElement('tr');
+        // Item name column
+        const tdName = document.createElement('td');
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Service / product';
+        nameInput.value = itemName;
+        nameInput.classList.add('item-name');
+        nameInput.style.width = '100%';
+        tdName.appendChild(nameInput);
+        
+        // Quantity column
+        const tdQty = document.createElement('td');
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.step = '1';
+        qtyInput.min = '0';
+        qtyInput.value = quantity;
+        qtyInput.classList.add('qty-input');
+        qtyInput.style.width = '85px';
+        tdQty.appendChild(qtyInput);
+        
+        // Unit price column
+        const tdPrice = document.createElement('td');
+        const priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.step = '0.01';
+        priceInput.min = '0';
+        priceInput.value = unitPrice;
+        priceInput.classList.add('price-input');
+        priceInput.style.width = '110px';
+        tdPrice.appendChild(priceInput);
+        
+        // Amount display column
+        const tdAmount = document.createElement('td');
+        const amountSpan = document.createElement('span');
+        amountSpan.classList.add('item-amount');
+        amountSpan.innerText = formatMoney(quantity * unitPrice);
+        tdAmount.appendChild(amountSpan);
+        
+        // Action column: remove button
+        const tdAction = document.createElement('td');
+        const removeBtn = document.createElement('button');
+        removeBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        removeBtn.classList.add('remove-row');
+        removeBtn.title = 'Remove item';
+        tdAction.appendChild(removeBtn);
+        
+        tr.appendChild(tdName);
+        tr.appendChild(tdQty);
+        tr.appendChild(tdPrice);
+        tr.appendChild(tdAmount);
+        tr.appendChild(tdAction);
+        
+        // Event listeners for realtime calculations and updates
+        const updateRowAndTotal = () => {
+            updateRowAmount(tr);
+            recalcTotals();
+        };
+        
+        qtyInput.addEventListener('input', updateRowAndTotal);
+        priceInput.addEventListener('input', updateRowAndTotal);
+        nameInput.addEventListener('input', () => {}); // no need calc, but keep consistent
+        removeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (document.querySelectorAll('#itemsBody tr').length === 1) {
+                // prevent empty table: you can clear or just reset to zero row? but better: clear all fields and set zero, but user can add.
+                // We'll just reset row values to 0 instead of removing last row for better UX
+                qtyInput.value = 0;
+                priceInput.value = 0;
+                updateRowAndTotal();
+                // Notify that cannot delete only row -> but we allow removal, to keep safe we push if needed.
+                if(confirm("Last line item: clearing to zero instead of deleting. Add new if needed.")) {}
+                else updateRowAndTotal();
+                return;
+            }
+            tr.remove();
+            recalcTotals();
+        });
+        
+        return tr;
+    }
+    
+    // Initialize default rows (two sample line items)
+    function initDefaultRows() {
+        itemsBody.innerHTML = ''; // clear any
+        const row1 = createNewRow('Website Development - Frontend', 2, 450.00);
+        const row2 = createNewRow('SEO Optimization Package', 1, 299.99);
+        itemsBody.appendChild(row1);
+        itemsBody.appendChild(row2);
+        // force update row amounts manually
+        updateRowAmount(row1);
+        updateRowAmount(row2);
+        recalcTotals();
+    }
+    
+    // Add new empty row
+    function addNewLineItem() {
+        const newRow = createNewRow('New Item', 1, 0);
+        itemsBody.appendChild(newRow);
+        updateRowAmount(newRow);
+        recalcTotals();
+    }
+    
+    // Listen for tax rate changes
+    taxRateInput.addEventListener('input', () => {
+        recalcTotals();
+    });
+    
+    // Global recalc on any structure changes or manual triggers
+    // Also, after any row actions it's covered; but we add a mutation observer optional? not needed because events cover
+    
+    // Additional safety: when typing in invoice details we don't need tax recalc, but line items recalc is done by row events.
+    // To support dynamic add of existing rows after manual price edit, we use event delegation also to catch .qty-input or .price-input globally? Already events attached per row. But for newly added rows, the createNewRow attaches listeners.
+    // Perfect.
+    
+    // ---------- PRINT FUNCTIONALITY: print invoice (hidden buttons adapted)
+    const printBtn = document.getElementById('printBtn');
+    printBtn.addEventListener('click', () => {
+        // Temporary hide action buttons from print? but we want clean print version. We'll clone and open new window? easier: standard window.print with CSS media print.
+        // We'll add a print media style override using style element
+        const originalTitle = document.title;
+        document.title = `Invoice_${document.getElementById('invoiceNumber').value || 'invoice'}`;
+        window.print();
+        document.title = originalTitle;
+    });
+    
+    // Add print media styles dynamically for better print layout (hide unnecessary buttons)
+    const stylePrint = document.createElement('style');
+    stylePrint.textContent = `
+        @media print {
+            .action-buttons, .add-item-btn, .remove-row, #addItemBtn, .btn, .btn-primary, .btn-outline-light {
+                display: none !important;
+            }
+            .invoice-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+                border-radius: 0;
+            }
+            .info-grid input, .info-grid textarea {
+                border: none;
+                background: transparent;
+                padding: 4px 0;
+                box-shadow: none;
+            }
+            .summary-panel {
+                border: 1px solid #ccc;
+                break-inside: avoid;
+            }
+            body {
+                background: white;
+                padding: 0.2in;
+            }
+            .invoice-table th, .invoice-table td {
+                border-bottom: 1px solid #aaa;
+            }
+            .tax-rate-input {
+                border: none;
+                background: transparent;
+            }
+            input, textarea {
+                border: none !important;
+                background: transparent !important;
+            }
+        }
+    `;
+    document.head.appendChild(stylePrint);
+    
+    // PDF generation via html2pdf with high quality settings
+    const savePdfBtn = document.getElementById('savePdfBtn');
+    savePdfBtn.addEventListener('click', () => {
+        const element = document.getElementById('invoiceContainer');
+        // clone deep to avoid interference? html2pdf handles well but ensure we don't capture temp changes.
+        // But some dynamic buttons would be visible in PDF, we want them hidden? For PDF we can hide action buttons using clone or PDF-specific style.
+        // Simple approach: temporarily add class for pdf hiding, then revert after generation.
+        const originalButtons = document.querySelectorAll('.action-buttons, .add-item-btn');
+        const originalDisplay = [];
+        originalButtons.forEach(btnGroup => {
+            originalDisplay.push(btnGroup.style.display);
+            btnGroup.style.display = 'none';
+        });
+        // also hide remove row buttons inside table for PDF cleanliness
+        const removeButtons = document.querySelectorAll('.remove-row');
+        const removeButtonsDisplay = [];
+        removeButtons.forEach(btn => {
+            removeButtonsDisplay.push(btn.style.display);
+            btn.style.display = 'none';
+        });
+        
+        const opt = {
+            margin:        [0.5, 0.5, 0.5, 0.5], // top, right, bottom, left in inches
+            filename:     `Invoice_${document.getElementById('invoiceNumber').value || 'document'}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, letterRendering: true, useCORS: true, logging: false },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+            // revert visibility
+            originalButtons.forEach((btnGroup, idx) => {
+                btnGroup.style.display = originalDisplay[idx] || '';
+            });
+            removeButtons.forEach((btn, idx) => {
+                btn.style.display = removeButtonsDisplay[idx] || 'inline-flex';
+            });
+        }).catch(err => {
+            console.warn(err);
+            // revert anyway
+            originalButtons.forEach((btnGroup, idx) => {
+                btnGroup.style.display = originalDisplay[idx] || '';
+            });
+            removeButtons.forEach((btn, idx) => {
+                btn.style.display = removeButtonsDisplay[idx] || 'inline-flex';
+            });
+            alert('PDF generation error, but you can use Print > Save as PDF.');
+        });
+    });
+    
+    // attach add line item event
+    addItemBtn.addEventListener('click', addNewLineItem);
+    
+    // Also we need to support manual changes on existing tax rate and all events attached.
+    // Additional: to keep summary updates when user modifies tax rate manually via input, the event works.
+    
+    // When any focus out plus extra precaution recalc
+    document.addEventListener('input', function(e) {
+        if (e.target.classList && (e.target.classList.contains('qty-input') || e.target.classList.contains('price-input') || e.target.id === 'taxRate')) {
+            // Already handled by row individual events, but ensure a final global recalc for safety after all changes.
+            // To avoid double recalc we can simply call recalcTotals() but will do safe debounceless.
+            recalcTotals();
+        }
+    });
+    
+    // Re-run recalculation after dynamic row manipulation (the remove button already calls recalcTotals)
+    // For initial load
+    initDefaultRows();
+    
+    // Also in case any script modifies invoiceNumber style etc, everything fine.
+    // Finally, trigger initial safe recalc after tiny delay (some fields may not computed)
+    window.addEventListener('load', () => {
+        recalcTotals();
+    });
+    
+    // If user adds line items, ensure .remove-row class event works (delegation also thanks to createNewRow direct binding)
+    // All set!
+</script>
+</body>
+</html>
